@@ -8,20 +8,18 @@ import scala.reflect.ClassTag
 
 object SecondarySort {
 
-  //tag::sortByTwoKeys
-  def sortByTwoKeys[K : Ordering : ClassTag , S, V : ClassTag](
-    pairRDD : RDD[((K, S), V)], partitions : Int ) = {
+  //tag::sortByTwoKeys[]
+  def sortByTwoKeys[K : Ordering : ClassTag , S, V : ClassTag](pairRDD : RDD[((K, S), V)], partitions : Int ) = {
     val colValuePartitioner = new PrimaryKeyPartitioner[K, S](partitions)
     implicit val ordering: Ordering[(K, S)] = Ordering.by(_._1)
     val sortedWithinParts = pairRDD.repartitionAndSortWithinPartitions(
       colValuePartitioner)
     sortedWithinParts
   }
-  //end::sortByTwoKeys
+  //end::sortByTwoKeys[]
 
-  //tag::sortAndGroup
-  def groupByKeyAndSortBySecondaryKey[K : Ordering : ClassTag, S, V : ClassTag](
-    pairRDD : RDD[((K, S), V)], partitions : Int ) = {
+  //tag::sortAndGroup[]
+  def groupByKeyAndSortBySecondaryKey[K : Ordering : ClassTag, S, V : ClassTag](pairRDD : RDD[((K, S), V)], partitions : Int ) = {
     val colValuePartitioner = new PrimaryKeyPartitioner[Double, Int](partitions)
     implicit val ordering: Ordering[(K, S)] = Ordering.by(_._1)
     val sortedWithinParts = pairRDD.repartitionAndSortWithinPartitions(
@@ -49,11 +47,11 @@ object SecondarySort {
       }
     }).map { case (key, buf) => (key, buf.toList) }.iterator
   }
-  //end::sortAndGroup
+  //end::sortAndGroup[]
 
 }
 
-//tag::primaryKeyPartitioner
+//tag::primaryKeyPartitioner[]
 class PrimaryKeyPartitioner[K, S](partitions: Int) extends Partitioner {
   /**
    * We create a hash partitioner and use it with the first set of keys.
@@ -70,35 +68,35 @@ class PrimaryKeyPartitioner[K, S](partitions: Int) extends Partitioner {
     delegatePartitioner.getPartition(k._1)
   }
 }
-//end::primaryKeyPartitioner
-
+//end::primaryKeyPartitioner[]
 
 object CoPartitioningLessons {
 
-  def coLocated[K,V](a : RDD[(K, V)], b : RDD[(K, V)], partitionerX : Partitioner, partitionerY :Partitioner): Unit ={
-    //tag::coLocated
+  def coLocated[K,V](a : RDD[(K, V)], b : RDD[(K, V)],
+    partitionerX : Partitioner, partitionerY :Partitioner): Unit = {
+
+    //tag::coLocated
     val rddA = a.partitionBy(partitionerX)
     rddA.cache()
     val rddB = b.partitionBy(partitionerY)
     rddB.cache()
     val rddC = a.cogroup(b)
     rddC.count()
-    //end::coLocated
-  }
+    //end::coLocated[]
+    }
 
+  def notCoLocated[K,V](a : RDD[(K, V)], b : RDD[(K, V)],
+    partitionerX : Partitioner, partitionerY :Partitioner): Unit = {
 
-  def notCoLocated[K,V](a : RDD[(K, V)], b : RDD[(K, V)], partitionerX : Partitioner, partitionerY :Partitioner): Unit = {
-    //tag::notCoLocated
+    //tag::notCoLocated
     val rddA = a.partitionBy(partitionerX)
     rddA.cache()
     val rddB = b.partitionBy(partitionerY)
     rddB.cache()
     val rddC = a.cogroup(b)
-    rddA.count() //forces evaluation of partitionBy for a
-    rddB.count() //forces evaluation of partitionBVy for b
-    rddC.count() //forces cogroup transformation, but partitionBy has already occurred
-    //end::notCoLocated
-  }
-
+    rddA.count()
+    rddB.count()
+    rddC.count()
+    //end::notCoLocated[]
+    }
 }
-
