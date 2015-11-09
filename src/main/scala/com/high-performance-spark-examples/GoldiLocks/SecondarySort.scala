@@ -9,7 +9,8 @@ import scala.reflect.ClassTag
 object SecondarySort {
 
   //tag::sortByTwoKeys
-  def sortByTwoKeys[K : Ordering : ClassTag , S, V : ClassTag](pairRDD : RDD[((K, S), V)], partitions : Int ) = {
+  def sortByTwoKeys[K : Ordering : ClassTag , S, V : ClassTag](
+    pairRDD : RDD[((K, S), V)], partitions : Int ) = {
     val colValuePartitioner = new PrimaryKeyPartitioner[K, S](partitions)
     implicit val ordering: Ordering[(K, S)] = Ordering.by(_._1)
     val sortedWithinParts = pairRDD.repartitionAndSortWithinPartitions(
@@ -19,7 +20,8 @@ object SecondarySort {
   //end::sortByTwoKeys
 
   //tag::sortAndGroup
-  def groupByKeyAndSortBySecondaryKey[K : Ordering : ClassTag, S, V : ClassTag](pairRDD : RDD[((K, S), V)], partitions : Int ) = {
+  def groupByKeyAndSortBySecondaryKey[K : Ordering : ClassTag, S, V : ClassTag](
+    pairRDD : RDD[((K, S), V)], partitions : Int ) = {
     val colValuePartitioner = new PrimaryKeyPartitioner[Double, Int](partitions)
     implicit val ordering: Ordering[(K, S)] = Ordering.by(_._1)
     val sortedWithinParts = pairRDD.repartitionAndSortWithinPartitions(
@@ -69,3 +71,34 @@ class PrimaryKeyPartitioner[K, S](partitions: Int) extends Partitioner {
   }
 }
 //end::primaryKeyPartitioner
+
+
+object CoPartitioningLessons {
+
+  def coLocated[K,V](a : RDD[(K, V)], b : RDD[(K, V)], partitionerX : Partitioner, partitionerY :Partitioner): Unit ={
+    //tag::coLocated
+    val rddA = a.partitionBy(partitionerX)
+    rddA.cache()
+    val rddB = b.partitionBy(partitionerY)
+    rddB.cache()
+    val rddC = a.cogroup(b)
+    rddC.count()
+    //end::coLocated
+  }
+
+
+  def notCoLocated[K,V](a : RDD[(K, V)], b : RDD[(K, V)], partitionerX : Partitioner, partitionerY :Partitioner): Unit = {
+    //tag::notCoLocated
+    val rddA = a.partitionBy(partitionerX)
+    rddA.cache()
+    val rddB = b.partitionBy(partitionerY)
+    rddB.cache()
+    val rddC = a.cogroup(b)
+    rddA.count() //forces evaluation of partitionBy for a
+    rddB.count() //forces evaluation of partitionBVy for b
+    rddC.count() //forces cogroup transformation, but partitionBy has already occurred
+    //end::notCoLocated
+  }
+
+}
+
